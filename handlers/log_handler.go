@@ -50,14 +50,27 @@ func (h *LogHandler) ProcessMessage(ctx context.Context, message *kafka.Message)
 		return
 	}
 
-	connectionLog := models.ConnectionLog{
-		LastConnection: time.Now(),
-		UserId:         user.UserId,
-	}
-
-	err = h.ConnectionLogRepository.Create(ctx, connectionLog)
+	existConnectionLog, err := h.ConnectionLogRepository.GetByUserId(ctx, user.UserId)
 
 	if err != nil {
-		log.Println("WE GOT AN ERROR TRYING TO CREATE A CONNECTION LOG: ", err.Error())
+		connectionLog := models.ConnectionLog{
+			LastConnection: time.Now(),
+			UserId:         user.UserId,
+		}
+
+		err = h.ConnectionLogRepository.Create(ctx, connectionLog)
+
+		if err != nil {
+			log.Println("WE GOT AN ERROR TRYING TO CREATE A CONNECTION LOG: ", err.Error())
+		}
+
+		return
+	}
+
+	existConnectionLog.LastConnection = time.Now()
+	err = h.ConnectionLogRepository.UpdateById(ctx, existConnectionLog.Id, existConnectionLog)
+
+	if err != nil {
+		log.Println("WE GOT AN ERROR TRYING TO UPDATE A CONNECTION LOG: ", err.Error())
 	}
 }
