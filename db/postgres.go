@@ -2,12 +2,37 @@ package db
 
 import (
 	"database/sql"
-	"os"
+	"log"
+	"sync"
+
+	"escort-book-user-log-consumer/config"
 
 	_ "github.com/lib/pq"
 )
 
-func getConnection() (*sql.DB, error) {
-	uri := os.Getenv("DATABASE_URI")
-	return sql.Open("postgres", uri)
+var postgresInstance *PostgresClient
+var singlePostgresClient sync.Once
+
+type PostgresClient struct {
+	UserDB *sql.DB
+}
+
+func initPostgresClient() {
+	userDB, err := sql.Open(
+		"postgres",
+		config.InitializePostgres().Databases.User,
+	)
+
+	if err != nil {
+		log.Fatalf("Error connecting with user DB: %s", err.Error())
+	}
+
+	postgresInstance = &PostgresClient{
+		UserDB: userDB,
+	}
+}
+
+func NewPostgresClient() *PostgresClient {
+	singlePostgresClient.Do(initPostgresClient)
+	return postgresInstance
 }
